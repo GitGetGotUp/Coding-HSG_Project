@@ -2,7 +2,7 @@
 #Niklas Halfar and Florian Lerf
 #Forecasting US Consumption expenditure using Machine Learning
 rm(list = ls())
-#0 PAckages and Libraries#######################################################
+#0 Packages and Libraries#######################################################
 
 #The installing of the packages only needs to be done once, the packages will be loaded
 #from CRAN to your local machine:
@@ -84,12 +84,12 @@ inflation_growth <- global_economy %>%
 #we convert it again to a tsibble
 inflation_growth <- as_tsibble(inflation_growth, index = Year)
 
-#we mutate the Year with substring to loose the month.
+#we mutate the Year with substring function to loose the month.
 df_ts <- df_ts %>%
   mutate(Year = substr(date, 1,4))
 
-#We still have two different classes for the two date variables in the inflation and original dataets
-#numeric and character. 
+#We still have two different classes for the two date variables in the inflation and original datasets
+#numeric and character class but we only want them to be data class. 
 class(inflation_growth$Year)
 class(df_ts$Year)
 
@@ -112,10 +112,10 @@ df_ts <- df_ts %>%
 range(df_ts$Consumption)
 mean(df_ts$Consumption)
 #The Consumption in 1967 has changed from 2549$ to 16656$. This is because 2549$
-#Would have been roughly 16656$ in 2015.
+#would have been roughly 16656$ in 2015.
 
 
-#We thougt that probably Consumption is higher in times of good economics growth and
+#We thougt that probably Consumption is higher in times of good economic growth and
 #lower in times of less growth or decline. So we wanted to add an indicator into our 
 #data that tells us if the economy is in a boom period or if we are in a recession. 
 #We use binary encoding of the recession variable. 1 stands for a recessionary period
@@ -147,13 +147,14 @@ rm(url, inflation_growth)
 
 #3 Preliminary (exploratory) analysis###########################################
 
+#We plot the data with ggplot in a first step to gain some insights visually. 
+
 #some simple Time Series graph
 ggplot(df_ts) +
   geom_line(mapping = aes(x = date, y = Consumption), colour = "red")+
   labs(title = "Consumption in the US Economy", 
        y = "Consumption expenditure per person", 
        x = "Date")
-
 #We can see there are some swings in the consumption graph.  
 
 ggplot(df_ts) +
@@ -169,7 +170,7 @@ ggplot(df_ts) +
        y = "unemployment duration", 
        x = "Date")
 
-#some boom bust pattern over many years, and maybe some seasonality over each year are present
+#some boom bust pattern over many years, and maybe some seasonality over each year can be observed.
 
 #4 Time Series Decomposition using LOESS#########################################
 #We will now try to find patterns in the time series.
@@ -197,9 +198,9 @@ df_ts %>%
 #economic growth is going higher and higher in the US. There also is some seasonal component in
 #consumption, which varies from -400 til 400 approximately each year. 
 #In the remainder we can see the part of the data which cannot be explained by season or trend
-#and we will try to predict. It is very volatile in the 1980's boom and during the dotcom bubble and
+#and we will try to predict. It is very volatile in the 1980's and during the dotcom bubble and
 #later the financial crisis of 2008. We have build in the recession binary variables to at least
-#somewhat help our model later catch these more volatile phases. 
+#somewhat help our model catch these more volatile phases. 
 
 #Now instead of graphically we decompose the data set into the actual values and make a table. 
 STL_dcmp <- df_ts %>%
@@ -251,6 +252,7 @@ plot2 <- qplot(Month, detrend, data = STL_dcmp, geom = "line") + ggtitle("Trend 
 plot3 <- qplot(Month, season_adjust, data = STL_dcmp, geom = "line") + ggtitle("Season adjusted")
 grid.arrange(plot1, plot2, plot3, nrow = 3)
 
+#Clean up environment
 rm(plot1, plot2, plot3)
 
 
@@ -299,19 +301,24 @@ df_ts <- df_ts %>%
 #if they can predict the new values.
 #We will use the seasonally adjusted time series. 
 
+#make a training and data set with filter function
 train <- df_ts %>%
   filter_index("1967-01-01" ~ "2013-01-01")
 test <- df_ts %>%
   filter_index("2013-01-01" ~ "2015-04-01")
-# Fit the models
+
+# Fit the models with the training dataset
+#We make a mean, a naive and a seasonal naive model.
 dumb_fit <- train %>%
   model(
     Mean = MEAN(remainder),
     `Naïve` = NAIVE(remainder),
     `Seasonal naïve` = SNAIVE(remainder),
   )
-# Generate forecasts for a bit more than two years (the testing dataset)
+
+# Generate forecasts for a bit more than two years (on the testing dataset)
 dumb_fc <- dumb_fit %>% forecast(h = 27)
+
 # Plot forecasts against actual values
 dumb_fc %>%
   autoplot(test, level = NULL) +
@@ -340,7 +347,9 @@ train %>%
   labs(title="US Consumption expenditure", y="$US" )
 
 #Evaluating the model in numbers not in graphs.
-
+#We do this by training on the train data, and then forecast for 28 months. 
+#Then we compare the forecast to our actual values in the testing dataset and 
+#the difference is the error. We use the mean average error (MAE). 
 snaive_model <- snaive(train$remainder, h=28)
 
 autoplot(snaive_model) +
@@ -349,11 +358,12 @@ autoplot(snaive_model) +
 
 accuracy(snaive_model, test$remainder)
 mean(test$remainder)
-#Mean Average erro is 188.88684 for a variable with a mean of -16.55685
+#Mean Average error is 188.88684 for a variable with a mean of -16.55685
 #So our prediction is not really good. 
 
 #Same prediction but for the seasonally adjusted time series. 
 #Predictiing the seasonally adjusted time series. 
+#Important is the MAE we get at the end. 
 fit_dcmp <- df_ts %>%
   model(stlf = decomposition_model(
     STL(Consumption.x ~ trend(window = 7), robust = TRUE),
