@@ -368,10 +368,12 @@ train %>%
 #the difference is the error. We use the mean average error (MAE). 
 snaive_model <- snaive(train$remainder, h=28)
 
+#plot it
 autoplot(snaive_model) +
   ggtitle('SNaive - Forecast')+
   xlab('Date') + ylab('Consumption spending')
 
+#This checks the error of the model on the test set
 accuracy(snaive_model, test$remainder)
 mean(test$remainder)
 #Mean Average error is 188.88684 for a variable with a mean of -16.55685
@@ -381,37 +383,44 @@ mean(test$remainder)
 #can follow the linear trend of the time series. 
 #How good is the seasonal naive trying to predict the whole Consumption spending
 #series with the trend and season in it.
+
+#Use seasonal Naive model to forecast Consumption of whole dataset
 fit_dcmp <- df_ts %>%
   model(stlf = decomposition_model(
     STL(Consumption.x ~ trend(window = 7), robust = TRUE),
-    NAIVE(season_adjust)
+    SNAIVE(Consumption.x)
   ))
 
+#plot the forecast
 fit_dcmp %>%
   forecast() %>%
   autoplot(df_ts)+
   labs(y = "$",
        title = "US Consumption spending")
 
+#Do the seasonal naive only on Training data
 snaive_model <- snaive(train$Consumption.x, h=28)
 
+#plot it
 autoplot(snaive_model) +
   ggtitle('SNaive - Forecast')+
   xlab('Date') + ylab('Consumption spending')
 
-#Plot of the forecasted value vs the actual value.
+#Plot of the forecasted value vs the actual value on Testing data
 train %>%
   model(SNAIVE(Consumption.x)) %>%
   forecast(h = 28) %>%
   autoplot(test) +
   labs(title="Blue forecast vs Black actual value, Seasonal Naive", y="$US" )
 
+#get the acuracy = error metrics for it, we only use the MAE. 
 accuracy(snaive_model, test$Consumption.x)
 
 #                MAE
 #Training set  201.1439
 #Test set      730.5162
 
+#average of consumption of test set.
 mean(test$Consumption.x)
 
 
@@ -432,13 +441,15 @@ rm(dumb_fc, dumb_fit, us_recession, fit_dcmp)
 #With the TSLM Function we can add the Trend and the Season into the regression variables, so they 
 #can help us predict the Consumption. This is why we decomposed the time series. 
 
+#make a linear model which predicts consumption using all other factors
 linear_model <- df_ts %>%
   model(tslm = TSLM(Consumption.x ~ Population + Savingsrate + UnemploymentDuration + Unemployed + USREC + trend + season_year))
+#get info about the model
 report(linear_model)
 
 #Our model is able to explain a lot of the variation in the data as we have an R^2 value of 0.9995
 
-#Fitted Values:
+#Fitted Values of the linear model vs the actual values
 augment(linear_model) %>%
   ggplot(aes(x = df_ts$date)) +
   geom_line(aes(y = Consumption.x, colour = "Data")) +
@@ -449,6 +460,7 @@ augment(linear_model) %>%
   scale_colour_manual(values=c(Data="black",Fitted="#D55E00")) +
   guides(colour = guide_legend(title = NULL))
 
+#How high is the error (MAE)
 mean(test$Consumption.x)
 linear_model_result <- accuracy(linear_model)
 linear_model_result
@@ -458,6 +470,8 @@ linear_model_result
 
 #5.2.2 Polynomial Multivariate Regression:
 #We now use polynomials instead of the linear form for our model and perform the same analysis:
+
+#code for polynomial model
 poly_model <- df_ts %>%
   model(tslm = TSLM(Consumption.x ~ poly(Population + Savingsrate + UnemploymentDuration + Unemployed + USREC + trend + season_year, degree = 2)))
 report(poly_model)
@@ -473,6 +487,7 @@ augment(poly_model) %>%
   scale_colour_manual(values=c(Data="black",Fitted="#D55E00")) +
   guides(colour = guide_legend(title = NULL))
 
+#how accurate is it?
 mean(test$Consumption.x)
 poly_model_result <- accuracy(poly_model)
 poly_model_result
@@ -490,10 +505,10 @@ poly_model_result
 #uses them to create the forecast. It is successful if the data follows a pattern and is 
 #not just some random events chained together. 
 
+#make an arima model on the training data
 caf_fit <- train %>%
   model(stepwise = ARIMA(Consumption.x),
         search = ARIMA(Consumption.x, stepwise=FALSE))
-
 
 glance(caf_fit) %>% arrange(AICc) %>% select(.model:BIC)
 
@@ -501,7 +516,7 @@ caf_fit %>%
   select(search) %>%
   gg_tsresiduals()
 
-#Forecast for two years:
+#Forecast for two years and four month (Testing timeframe)
 caf_fit %>%
   forecast(h=28) %>%
   filter(.model=='search') %>%
@@ -509,8 +524,12 @@ caf_fit %>%
   labs(y = "Consumption",
        title = "Blue forecast vs Black actual value, ARIMA model")
 
+#here the accuracy command did not work so we coded it manually
+#we forecasted our predictions, joined them to the actual values
+#then took the absolute difference of the values and took the mean.
+#note .mean is the name of a column not the acutal mean, so it is coded correctly.
 arima_frc <- caf_fit %>%
-  forecast(h=24) %>%
+  forecast(h=28) %>%
   filter(.model=='search')
 
 test_arima <- test %>%
@@ -530,6 +549,8 @@ rm(arima_frc, caf_fit, linear_model_result, poly_model_result, test_arima)
 
 
 #5.4 Facebook's Prophet Model:##################################################
+
+#code for a prophet model with yearly periods and additive time series.
 fit <- train %>%
   model(
     prophet = prophet(Consumption.x ~ season(period = 12, order = 1,
@@ -561,7 +582,7 @@ fc %>% accuracy(test)
 #error. 
 
 
-#The linear model had an MAE of 93.73$
+#The linear model had an MAE of 93.73
 #The seasonal naive model had an MAE of 731
 #The Polynomial model had an MAE of 847.66
 #The ARIMA model had an MAE of 236.02
@@ -579,8 +600,9 @@ fc %>% accuracy(test)
 #SNAIVE, ARIMA and multivariate like the linear, prophet and polynomial. 
 
 #In conclusion we really enjoyed working on this project. We furthered our skills in R. 
-#We loaded datasets, cleaned and joined them. Further we learned how to code certain 
-#forecasting models and learned the conceptual part behind it with the help of the textbook. 
+#We loaded datasets, cleaned and joined them. While we already knew much of the conceptual
+#economic and forecasting principles, we learned a lot through the practical application
+#and we got a better understanding of R through the Course and this project. 
 
 
 #8 Bibliography#################################################################
