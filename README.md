@@ -16,6 +16,6 @@ Any redistribution or copies of our code are not allowed as it is for a uni proj
 The Repo contains the following files:
 - economicsv6.r: final R code script of our group
 - project_paper.pdf: final project paper to supplement code script
-- us_recession.csv: file will be accessed by R script when running
+- us_recession.csv: external dataset from the FRED St. Louis
 
 
