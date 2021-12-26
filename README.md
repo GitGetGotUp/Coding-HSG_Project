@@ -4,8 +4,8 @@ This is a group project for the HSG course:
 3,793 | 4,799: Skills: Programming - Introduction Level. 
 
 We took the economics data set from the tidyverse library, global_economy data set
-from the tsibbledata library and the USREC data set from the FRED St. Louis and tried to
-forecast personal consumption expenditure of the US-Economy using ML-tools in R.
+from the tsibbledata library and the USREC data set from the FRED St. Louis, joined them and tried to
+forecast personal consumption expenditure inflation adjusted and per capita of the US-Economy using ML-tools in R.
 
 We followed the techniques and principles outlines in:
 Hyndman, R.J., & Athanasopoulos, G. (2021) Forecasting: principles and practice,
