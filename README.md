@@ -18,5 +18,4 @@ The Repo contains the following files:
 - project_paper.pdf: final project paper to supplement code script
 - us_recession.csv: file will be accessed by R script when running
 
-cheers!
 
