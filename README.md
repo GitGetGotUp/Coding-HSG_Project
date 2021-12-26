@@ -1,6 +1,6 @@
 # Coding-HSG_Project
 
-This is a group project by Niklas Halfar & Florian Lerf for the HSG course:
+This is a group project for the HSG course:
 3,793 | 4,799: Skills: Programming - Introduction Level. 
 
 We took the economics data set from the tidyverse library, global_economy data set
@@ -18,5 +18,5 @@ The Repo contains the following files:
 - project_paper.pdf: final project paper to supplement code script
 - us_recession.csv: file will be accessed by R script when running
 
-cheers, GitGotGetUp and FlorianLerf
+cheers!
 
